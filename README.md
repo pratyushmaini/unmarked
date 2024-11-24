@@ -4,7 +4,7 @@
 
 ## Objective
 
-- **Blue Team (Defenders)**: Implement robust watermarking techniques within the diffusion model that are difficult for the Red Team to remove without significantly degrading image quality.
+- **Blue Team (Defenders)**: Implement robust watermarking techniques within the diffusion model that are difficult for the Red Team to remove without significantly degrading image quality. They additionally need to find the "key" that was embedded in the image. The key is an integer between 0 and 100.
 - **Red Team (Attackers)**: Develop methods to remove or obscure the embedded watermarks while maintaining high image quality and adhering to distortion constraints.
 
 ## Repository Structure
