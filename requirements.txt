@@ -1,4 +1,6 @@
 torch
+transformers
+accelerate
 diffusers
 huggingface_hub
 safetensors

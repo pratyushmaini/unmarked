@@ -1,10 +1,7 @@
-from .watermarking import SimpleWatermark, InvisibleWatermark
-from .detection import NoDetection, BasicDetector, AdvancedDetector
+# methods/__init__.py
+
+from .watermarked_diffusion_pipeline import BaseWatermarkedDiffusionPipeline
 
 __all__ = [
-    'SimpleWatermark',
-    'InvisibleWatermark',
-    'NoDetection',
-    'BasicDetector',
-    'AdvancedDetector',
+    'BaseWatermarkedDiffusionPipeline',
 ]

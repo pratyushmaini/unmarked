@@ -38,7 +38,7 @@ unmarked/
 - **`battle.py`**: Orchestrates the battle between the Red and Blue teams using configurations from the registry.
 - **`methods/`**: Contains the `WatermarkedPipeline` class that extends the SDXL pipeline for watermarking and detection.
 - **`attacks/`**: Contains attack implementations by the Red Team.
-- **No changes are to be made to main files (`battle.py`, `main.py`, `registry.py`), ensuring a standardized interface for all participants.**
+- No changes are to be made to main files (`battle.py`, `main.py`, `metrics`), ensuring a standardized interface for all participants.
 
 ## Getting Started
 
@@ -47,34 +47,22 @@ unmarked/
 ```bash
 git clone https://github.com/yourusername/unmarked.git
 cd unmarked
-bash setup.sh
+conda create -n unmarked python=3.11 -y
+pip install -r requirements.txt
 ```
 
-- **Note**: The `setup.sh` script creates a virtual environment and installs all required dependencies listed in `requirements.txt`.
 
 ### 2. Understand the Codebase Quickly
 
 #### Key Files and Their Roles
 
 - **`registry.py`**: Manages all available methods, attacks, and team configurations.
-  - **Purpose**: Provides a centralized place to register your team's methods and attacks without modifying the main files.
 - **`battle.py`**: Manages the execution flow of generating images, applying attacks, and detecting watermarks.
-  - **Purpose**: Uses configurations from `registry.py` to run battles between teams.
 - **`main.py`**: Entry point for running the benchmark and testing your implementations.
-  - **Purpose**: Parses command-line arguments and initiates the battle using `battle.py`.
 
 #### Quick Code Exploration Commands
 
-1. **View the Registry**
-
-   ```bash
-   less registry.py
-   ```
-
-   - **Tip**: Press `q` to exit the `less` viewer.
-   - **Purpose**: See how methods, attacks, and teams are registered.
-
-2. **Run a Simple Battle with Baseline Teams**
+1. **Run a Simple Battle with Baseline Teams**
 
    ```bash
    python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt "A serene mountain landscape at sunrise"
@@ -82,7 +70,7 @@ bash setup.sh
 
    - **Expected Outcome**: Generates an image without any watermarking or attack. No watermark should be detected.
 
-3. **Blue Team Adds Watermark, Red Team Does Not Attack**
+2. **Blue Team Adds Watermark, Red Team Does Not Attack**
 
    ```bash
    python main.py --red_team NoAttackTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
@@ -90,7 +78,7 @@ bash setup.sh
 
    - **Expected Outcome**: The image is watermarked by the Blue Team. The watermark should be detectable by the Blue Team's detection method.
 
-4. **Blue Team Adds Watermark, Red Team Attempts to Remove It**
+3. **Blue Team Adds Watermark, Red Team Attempts to Remove It**
 
    ```bash
    python main.py --red_team BaseRedTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
@@ -98,22 +86,6 @@ bash setup.sh
 
    - **Expected Outcome**: The Red Team applies their attack to remove the watermark. Evaluate whether the watermark is still detectable and assess the image quality.
 
-5. **Inspect the Output Images**
-
-   ```bash
-   open outputs/BaseRedTeam_vs_BaseBlueTeam.png
-   ```
-
-   - **Note**: Replace `open` with the appropriate image viewer command for your OS (`xdg-open` on Linux, `start` on Windows).
-
-6. **Print Battle Logs**
-
-   - The `battle.py` script logs detailed information about the battle. You can view the logs by checking the console output or modifying the logging level.
-
-   ```python
-   # In battle.py, adjust logging level if needed
-   logging.basicConfig(level=logging.DEBUG)
-   ```
 
 ### 3. Implement Your Strategy
 

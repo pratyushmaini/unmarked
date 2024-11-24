@@ -1,51 +1,27 @@
-# Available watermarking and detection methods
+# registry.py
+
 BASELINE_METHODS = {
     'watermarking': {
-        'SimpleWatermark': 'methods.watermarking.SimpleWatermark',
-        'InvisibleWatermark': 'methods.watermarking.InvisibleWatermark',
-    },
-    'detection': {
-        'NoDetection': 'methods.detection.NoDetection',
-        'BasicDetector': 'methods.detection.BasicDetector',
+        'BaseWatermarkedDiffusionPipeline': 'methods.watermarked_diffusion_pipeline.BaseWatermarkedDiffusionPipeline',
     },
     'attacks': {
-        'GaussianNoiseAttack': 'attacks.gaussian_noise_attack.GaussianNoiseAttack',
-        'AdversarialPatchAttack': 'attacks.adversarial_patch_attack.AdversarialPatchAttack',
+        'NoAttack': 'attacks.base_attack.NoAttack',
+        # Add other attack methods here
     }
 }
 
-# Baseline team configurations
 BASELINE_TEAMS = {
-    'BaseBlueTeam': {
-        'type': 'blue',
-        'watermark_method': 'SimpleWatermark',
-        'detection_method': 'BasicDetector'
-    },
-    'BaseRedTeam': {
-        'type': 'red',
-        'attack_method': 'GaussianNoiseAttack'
-    },
     'NoWatermarkTeam': {
         'type': 'blue',
-        'watermark_method': None,
-        'detection_method': None
+        'watermark_method': 'BaseWatermarkedDiffusionPipeline'
     },
     'NoAttackTeam': {
         'type': 'red',
-        'attack_method': None
-    }
+        'attack_method': 'NoAttack'
+    },
+    # Add other baseline teams here
 }
 
-# Students can register their teams here
 STUDENT_TEAMS = {
-    'AdvancedBlueTeam': {
-        'type': 'blue',
-        'watermark_method': 'InvisibleWatermark',
-        'detection_method': 'AdvancedDetector'
-    },
-    'AdvancedRedTeam1': {
-        'type': 'red',
-        'attack_method': 'AdversarialPatchAttack'
-    },
-    # Add more student teams as needed
+    # Register your teams here
 }

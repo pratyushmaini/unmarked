@@ -4,58 +4,66 @@ import torch
 from pathlib import Path
 import logging
 from PIL import Image
-from methods.watermarked_diffusion_pipeline import WatermarkedDiffusionPipeline
+from importlib import import_module
+from registry import BASELINE_METHODS, BASELINE_TEAMS, STUDENT_TEAMS
 
 class Battle:
     """Manages battles between Red and Blue teams"""
 
-    def __init__(self, model_name="sdxl", optimize_memory=False, output_dir='outputs'):
+    def __init__(self, output_dir='outputs', optimize_memory=False):
         self.logger = self._setup_logging()
-        self.model_name = model_name.lower()
-        self.model = self._setup_model(optimize_memory=optimize_memory)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        self.optimize_memory = optimize_memory
 
     def _setup_logging(self):
         logging.basicConfig(level=logging.INFO)
         return logging.getLogger(__name__)
 
-    def _setup_model(self, optimize_memory=True):
-        """Setup the Watermarked Diffusion Pipeline"""
-        if self.model_name == "sdxl":
-            # Load the SDXL base model
-            pipe = WatermarkedDiffusionPipeline.from_pretrained(
-                "stabilityai/stable-diffusion-xl-base-1.0",
-                torch_dtype=torch.float16
-            ).to("cuda")
-            if optimize_memory:
-                pipe.enable_attention_slicing()
-                pipe.enable_model_cpu_offload()
-            return pipe
-        else:
-            raise ValueError(f"Unknown model: {self.model_name}. Supported models: 'sdxl'")
+    def run_battle(self, red_team_name: str, blue_team_name: str, prompt: str, key: int = 99):
+        """Execute a battle between teams"""
 
-    def run_battle(self, prompt: str, key: int = None):
-        """Generate an image with watermark and attempt to detect the watermark"""
+        # Get team configs
+        blue_config = {**BASELINE_TEAMS, **STUDENT_TEAMS}.get(blue_team_name)
+        red_config = {**BASELINE_TEAMS, **STUDENT_TEAMS}.get(red_team_name)
 
-        self.logger.info(f"Prompt: {prompt}")
-        self.logger.info(f"Using key: {key}")
+        if not blue_config or blue_config['type'] != 'blue':
+            raise ValueError("Blue team not found or invalid")
+        if not red_config or red_config['type'] != 'red':
+            raise ValueError("Red team not found or invalid")
 
-        # Generate image using the diffusion model with watermark
-        generated_image = self.model.generate(prompt, key=key)
-        generated_image_path = self.output_dir / f"generated_image.png"
+        # Initialize Blue Team's Watermarked Diffusion Pipeline
+        wm_method_name = blue_config['watermark_method']
+        wm_method_path = BASELINE_METHODS['watermarking'][wm_method_name]
+        module_path, class_name = wm_method_path.rsplit('.', 1)
+        module = import_module(module_path)
+        WatermarkedPipelineClass = getattr(module, class_name)
+
+        # Initialize the pipeline
+        watermarked_pipeline = WatermarkedPipelineClass()
+
+        # Generate image with watermark
+        generated_image = watermarked_pipeline.generate(prompt, key=key)
+        generated_image_path = self.output_dir / f"{blue_team_name}_image.png"
         generated_image.save(generated_image_path)
         self.logger.info(f"Generated image saved to {generated_image_path}")
 
-        # Red Team attempts to remove watermark (students will implement this)
-        # For now, we'll assume the attacked image is the same as the generated image
-        attacked_image = generated_image  # Placeholder for attack
+        # Apply Red Team's attack
+        attack_name = red_config['attack_method']
+        attack_path = BASELINE_METHODS['attacks'][attack_name]
+        module_path, class_name = attack_path.rsplit('.', 1)
+        module = import_module(module_path)
+        AttackClass = getattr(module, class_name)
+        attack = AttackClass()
+        attacked_image = attack.apply(generated_image)
+        attacked_image_path = self.output_dir / f"{red_team_name}_vs_{blue_team_name}.png"
+        attacked_image.save(attacked_image_path)
+        self.logger.info(f"Attacked image saved to {attacked_image_path}")
 
-        # Blue Team attempts to detect the watermark
-        extracted_key = self.model.detect(attacked_image)
-        self.logger.info(f"Extracted key: {extracted_key}")
-
+        # Detect watermark using the Blue Team's pipeline
+        extracted_key = watermarked_pipeline.detect(attacked_image)
         detection_success = (extracted_key == key)
+        self.logger.info(f"Extracted key: {extracted_key}")
         self.logger.info(f"Watermark detection successful: {detection_success}")
 
         return {
