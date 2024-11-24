@@ -1,29 +1,26 @@
+# main.py
+
 import argparse
-from pathlib import Path
-from PIL import Image
 from battle import Battle
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Unmarked Benchmark Runner")
-    parser.add_argument('--blue_team', type=str, required=True, help="Name of the Blue Team")
-    parser.add_argument('--red_team', type=str, required=True, help="Name of the Red Team")
-    parser.add_argument('--image_path', type=str, required=True, help="Path to the input image")
+    parser.add_argument('--prompt', type=str, required=True, help="Prompt for image generation")
+    parser.add_argument('--key', type=int, default=None, help="Integer key for watermarking")
     parser.add_argument('--output_dir', type=str, default='outputs', help="Directory to save outputs")
+    parser.add_argument('--optimize_memory', action='store_true', help="Optimize model memory usage")
     return parser.parse_args()
 
 def main():
     args = parse_args()
 
-    # Load input image
-    image = Image.open(args.image_path).convert('RGB')
-
     # Initialize Battle
-    battle = Battle(output_dir=args.output_dir)
+    battle = Battle(output_dir=args.output_dir, optimize_memory=args.optimize_memory)
 
     # Run battle
-    results = battle.run_battle(args.blue_team, args.red_team, image)
+    results = battle.run_battle(prompt=args.prompt, key=args.key)
 
-    # Further processing or metric evaluations can be added here
+    # Additional metric evaluations can be added here
 
 if __name__ == "__main__":
     main()

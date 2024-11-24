@@ -1,51 +1,44 @@
 # Unmarked Challenge
 
-A benchmark challenge focused on washing out image watermarks. Teams compete to either create robust watermarks that are hard to remove or develop methods to remove watermarks while maintaining image quality under certain constraints.
+**Unmarked** is a benchmark challenge focused on washing out image watermarks embedded within the outputs of the Stable Diffusion XL (SDXL) model. Participants will engage in a Red Team vs. Blue Team scenario, where the Blue Team embeds watermarks into the generated images, and the Red Team attempts to remove these watermarks under certain constraints.
 
-## Teams & Objectives
+## Objective
 
-### Blue Team
-- **Goal**: Embed watermarks into images that are difficult for the Red Team to remove without significantly degrading image quality.
-- **Tasks**:
-  - **Watermarking Methods**: Implement robust watermarking techniques in `methods/watermarking.py`.
-  - **Detection Methods**: Develop detection algorithms in `methods/detection.py` to verify the presence of watermarks in images.
-
-### Red Team
-- **Goal**: Remove or obscure watermarks from images provided by the Blue Team while keeping image distortions within acceptable limits.
-- **Tasks**:
-  - **Attack Strategies**: Implement watermark removal attacks in `attacks/`.
-  - **Constraints**: Must maintain high image quality and avoid excessive distortions that would be noticeable or detectable.
-
-## Evaluation
-
-- **Effectiveness of Watermarking**:
-  - How well the Blue Team's watermarks resist removal attempts.
-  - Detection rate of watermarks after Red Team's attacks.
-- **Attack Success Rate**:
-  - Ability of the Red Team to remove watermarks without causing significant image degradation.
-- **Image Quality Metrics**:
-  - **LPIPS**: Measures perceptual similarity between original and attacked images.
-  - **Clean FID**: Evaluates distribution similarity between sets of images.
-  - **Aesthetics Score**: Assesses visual appeal of the images.
-- **Area Under the Curve (AUC)**:
-  - Combines detection rates and image quality metrics to provide an overall performance score.
+- **Blue Team (Defenders)**: Implement robust watermarking techniques within the diffusion model that are difficult for the Red Team to remove without significantly degrading image quality.
+- **Red Team (Attackers)**: Develop methods to remove or obscure the embedded watermarks while maintaining high image quality and adhering to distortion constraints.
 
 ## Repository Structure
 
 ```
 unmarked/
-├── attacks/          # Red Team's attack implementations
-├── data/             # Datasets of watermarked and clean images
-├── methods/          # Blue Team's watermarking and detection methods
-├── metrics/          # Image quality and performance metrics
-├── scripts/          # Utility scripts for data processing and reporting
-├── README.md         # Project documentation
-├── battle.py         # Manages the competition between teams
-├── main.py           # Entry point to run the benchmark
-├── registry.py       # Registers available methods, attacks, and teams
-├── requirements.txt  # Project dependencies
-└── setup.sh          # Setup script for initializing the environment
+├── attacks/                # Red Team's attack implementations
+│   ├── __init__.py
+│   └── base_attack.py
+├── data/                   # Datasets for testing
+├── methods/                # Blue Team's watermarking and detection methods
+│   ├── __init__.py
+│   └── watermarked_pipeline.py
+├── metrics/                # Evaluation metrics
+│   ├── __init__.py
+│   ├── lpips_metric.py
+│   ├── aesthetics.py
+│   └── auc_metric.py
+├── scripts/                # Utility scripts
+├── registry.py             # Manages available methods, attacks, and teams
+├── battle.py               # Manages the competition between teams
+├── main.py                 # Entry point to run the benchmark
+├── README.md               # Project documentation
+├── requirements.txt        # Project dependencies
+└── setup.sh                # Setup script for initializing the environment
 ```
+
+## Key Components
+
+- **`registry.py`**: Central registry managing all available methods, attacks, and team configurations.
+- **`battle.py`**: Orchestrates the battle between the Red and Blue teams using configurations from the registry.
+- **`methods/`**: Contains the `WatermarkedPipeline` class that extends the SDXL pipeline for watermarking and detection.
+- **`attacks/`**: Contains attack implementations by the Red Team.
+- **No changes are to be made to main files (`battle.py`, `main.py`, `registry.py`), ensuring a standardized interface for all participants.**
 
 ## Getting Started
 
@@ -59,100 +52,242 @@ bash setup.sh
 
 - **Note**: The `setup.sh` script creates a virtual environment and installs all required dependencies listed in `requirements.txt`.
 
-### 2. Understand the Codebase
+### 2. Understand the Codebase Quickly
 
-Run the following commands to get familiar with the basic functionalities:
+#### Key Files and Their Roles
 
-#### Example 1: Running a Battle with No Defense and No Attack
+- **`registry.py`**: Manages all available methods, attacks, and team configurations.
+  - **Purpose**: Provides a centralized place to register your team's methods and attacks without modifying the main files.
+- **`battle.py`**: Manages the execution flow of generating images, applying attacks, and detecting watermarks.
+  - **Purpose**: Uses configurations from `registry.py` to run battles between teams.
+- **`main.py`**: Entry point for running the benchmark and testing your implementations.
+  - **Purpose**: Parses command-line arguments and initiates the battle using `battle.py`.
 
-```bash
-python main.py --blue_team NoWatermarkTeam --red_team NoAttackTeam --image_path data/clean_images/sample.jpg
-```
+#### Quick Code Exploration Commands
 
-- **Expected Outcome**: The original image is processed without any watermarking or attack. No watermark should be detected.
+1. **View the Registry**
 
-#### Example 2: Blue Team Adds Watermark, Red Team Does Not Attack
+   ```bash
+   less registry.py
+   ```
 
-```bash
-python main.py --blue_team BaseBlueTeam --red_team NoAttackTeam --image_path data/clean_images/sample.jpg
-```
+   - **Tip**: Press `q` to exit the `less` viewer.
+   - **Purpose**: See how methods, attacks, and teams are registered.
 
-- **Expected Outcome**: The image is watermarked by the Blue Team. The watermark should be detectable by the Blue Team's detection method.
+2. **Run a Simple Battle with Baseline Teams**
 
-#### Example 3: Blue Team Adds Watermark, Red Team Attempts to Remove It
+   ```bash
+   python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt "A serene mountain landscape at sunrise"
+   ```
 
-```bash
-python main.py --blue_team BaseBlueTeam --red_team BaseRedTeam --image_path data/clean_images/sample.jpg
-```
+   - **Expected Outcome**: Generates an image without any watermarking or attack. No watermark should be detected.
 
-- **Expected Outcome**: The Red Team applies a Gaussian noise attack to remove the watermark. Evaluate whether the watermark is still detectable and assess the image quality.
+3. **Blue Team Adds Watermark, Red Team Does Not Attack**
+
+   ```bash
+   python main.py --red_team NoAttackTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
+   ```
+
+   - **Expected Outcome**: The image is watermarked by the Blue Team. The watermark should be detectable by the Blue Team's detection method.
+
+4. **Blue Team Adds Watermark, Red Team Attempts to Remove It**
+
+   ```bash
+   python main.py --red_team BaseRedTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
+   ```
+
+   - **Expected Outcome**: The Red Team applies their attack to remove the watermark. Evaluate whether the watermark is still detectable and assess the image quality.
+
+5. **Inspect the Output Images**
+
+   ```bash
+   open outputs/BaseRedTeam_vs_BaseBlueTeam.png
+   ```
+
+   - **Note**: Replace `open` with the appropriate image viewer command for your OS (`xdg-open` on Linux, `start` on Windows).
+
+6. **Print Battle Logs**
+
+   - The `battle.py` script logs detailed information about the battle. You can view the logs by checking the console output or modifying the logging level.
+
+   ```python
+   # In battle.py, adjust logging level if needed
+   logging.basicConfig(level=logging.DEBUG)
+   ```
 
 ### 3. Implement Your Strategy
 
-#### For Blue Team:
+#### For Blue Team (Defenders)
 
-- **Watermarking Methods**: Enhance or create new methods in `methods/watermarking.py`.
-- **Detection Methods**: Improve detection algorithms in `methods/detection.py`.
-- **Register Your Team**: Add your team configuration to `registry.py` under `STUDENT_TEAMS`.
+- **Objective**: Implement robust watermarking and detection methods without modifying main files.
+- **Steps**:
 
-#### For Red Team:
+  1. **Create Your Watermarking Method**
 
-- **Attack Strategies**: Implement new attacks in the `attacks/` directory.
-- **Constraints**: Ensure that image distortions stay within acceptable limits.
-- **Register Your Team**: Add your team configuration to `registry.py` under `STUDENT_TEAMS`.
+     - In `methods/`, create a new file for your watermarking method, e.g., `my_watermarking.py`.
 
-#### Steps:
+     ```python
+     # methods/my_watermarking.py
 
-1. **Develop** your methods or attacks in the appropriate directories.
-2. **Register** your team in `registry.py`:
+     from methods.watermarked_pipeline import WatermarkedPipeline
 
-   ```python
-   STUDENT_TEAMS = {
-       'YourTeamNameBlue': {
-           'type': 'blue',
-           'watermark_method': 'YourWatermarkMethod',
-           'detection_method': 'YourDetectionMethod'
-       },
-       'YourTeamNameRed': {
-           'type': 'red',
-           'attack_method': 'YourAttackMethod'
-       },
-   }
-   ```
+     class MyWatermarkedPipeline(WatermarkedPipeline):
+         def __init__(self, *args, **kwargs):
+             super().__init__(*args, **kwargs)
 
-3. **Test** your implementations by running battles using `main.py`.
-4. **Document** your approach and findings in the README.
+         def embed_watermark(self, latents, key):
+             # Your watermark embedding logic here
+             return latents
 
-### 4. Evaluate and Iterate
+         def detect_watermark(self, image):
+             # Your watermark detection logic here
+             return key
+     ```
 
-- **Run Battles**: Use different combinations of Red and Blue teams to test the effectiveness of your methods.
-- **Assess Performance**: Utilize the metrics in the `metrics/` directory to evaluate image quality and watermark detectability.
-- **Optimize**: Based on the results, refine your methods to improve performance.
+  2. **Register Your Method in `registry.py`**
 
-### 5. Submit Your Work
+     ```python
+     # registry.py
+
+     BASELINE_METHODS = {
+         'watermarking': {
+             'BaseWatermarkedPipeline': 'methods.watermarked_pipeline.WatermarkedPipeline',
+             'MyWatermarkedPipeline': 'methods.my_watermarking.MyWatermarkedPipeline',
+         },
+         # ... other methods
+     }
+
+     # Register your team
+     STUDENT_TEAMS = {
+         'MyBlueTeam': {
+             'type': 'blue',
+             'watermark_method': 'MyWatermarkedPipeline',
+             'detection_method': 'MyWatermarkedPipeline',
+         },
+         # ... other teams
+     }
+     ```
+
+#### For Red Team (Attackers)
+
+- **Objective**: Develop attack methods to remove or obscure watermarks.
+- **Steps**:
+
+  1. **Create Your Attack Method**
+
+     - In `attacks/`, create a new file for your attack, e.g., `my_attack.py`.
+
+     ```python
+     # attacks/my_attack.py
+
+     from attacks.base_attack import BaseAttack
+     from PIL import Image
+
+     class MyAttack(BaseAttack):
+         def apply(self, image: Image) -> Image:
+             # Your attack logic here
+             return image
+     ```
+
+  2. **Register Your Attack in `registry.py`**
+
+     ```python
+     # registry.py
+
+     BASELINE_METHODS = {
+         'attacks': {
+             'BaseAttack': 'attacks.base_attack.BaseAttack',
+             'MyAttack': 'attacks.my_attack.MyAttack',
+         },
+         # ... other methods
+     }
+
+     # Register your team
+     STUDENT_TEAMS = {
+         'MyRedTeam': {
+             'type': 'red',
+             'attack_method': 'MyAttack',
+         },
+         # ... other teams
+     }
+     ```
+
+### 4. Run Your Battle
+
+```bash
+python main.py --red_team MyRedTeam --blue_team MyBlueTeam --prompt "A futuristic cityscape at night"
+```
+
+- **Expected Outcome**: The battle will use your custom watermarking and attack methods as registered in `registry.py`.
+
+### 5. Evaluate and Iterate
+
+- **Metrics**:
+
+  - **Watermark Detection Rate**: Whether the watermark is still detectable after the attack.
+  - **Image Quality**: Use metrics like LPIPS to assess the perceptual similarity between the original and attacked images.
+  - **Distortion Constraints**: Ensure your attacks do not introduce excessive distortions.
+
+- **Run Metrics Evaluation**:
+
+  ```bash
+  # Example command to evaluate LPIPS
+  python metrics/lpips_metric.py --original outputs/BaseBlueTeam_watermarked.png --modified outputs/MyRedTeam_vs_MyBlueTeam.png
+  ```
+
+### 6. Submit Your Work
 
 - **Fork** the repository.
-- **Commit** your changes, ensuring that your code is well-documented and follows the project's style guidelines.
-- **Document** your strategies and results in the README.
-- **Create a Pull Request** to submit your team's implementation for review.
+- **Commit** your changes, ensuring that you only add new files or modify `registry.py` and your own method/attack files.
+- **Document** your strategies and findings in the README or a separate documentation file.
+- **Create a Pull Request** to submit your implementation for review.
 
-## Strategies to Consider
+## Example: Registering Your Teams in `registry.py`
 
-### Blue Team
+```python
+# registry.py
 
-- **Robust Watermarking**:
-  - Use invisible watermarking techniques that are difficult to detect or remove.
-  - Employ frequency-domain watermarking to embed watermarks in less noticeable parts of the image spectrum.
-- **Advanced Detection**:
-  - Implement machine learning models to detect subtle changes indicative of watermark removal.
-  - Use statistical analysis to identify anomalies in images that have undergone attacks.
+BASELINE_METHODS = {
+    'watermarking': {
+        'BaseWatermarkedPipeline': 'methods.watermarked_pipeline.WatermarkedPipeline',
+        'MyWatermarkedPipeline': 'methods.my_watermarking.MyWatermarkedPipeline',
+        # ... other methods
+    },
+    'detection': {
+        'BaseDetector': 'methods.watermarked_pipeline.WatermarkedPipeline',
+        'MyDetector': 'methods.my_watermarking.MyWatermarkedPipeline',
+        # ... other methods
+    },
+    'attacks': {
+        'BaseAttack': 'attacks.base_attack.BaseAttack',
+        'MyAttack': 'attacks.my_attack.MyAttack',
+        # ... other attacks
+    }
+}
 
-### Red Team
+BASELINE_TEAMS = {
+    'BaseBlueTeam': {
+        'type': 'blue',
+        'watermark_method': 'BaseWatermarkedPipeline',
+        'detection_method': 'BaseDetector'
+    },
+    'BaseRedTeam': {
+        'type': 'red',
+        'attack_method': 'BaseAttack'
+    },
+    # ... other baseline teams
+}
 
-- **Image Processing Attacks**:
-  - Apply filters, noise reduction, or transformations to remove or degrade the watermark.
-- **Adversarial Attacks**:
-  - Generate adversarial examples that fool the detection algorithms without significant image distortion.
-- **Optimization-Based Methods**:
-  - Use optimization algorithms to find minimal perturbations that remove the watermark.
-
+STUDENT_TEAMS = {
+    'MyBlueTeam': {
+        'type': 'blue',
+        'watermark_method': 'MyWatermarkedPipeline',
+        'detection_method': 'MyDetector'
+    },
+    'MyRedTeam': {
+        'type': 'red',
+        'attack_method': 'MyAttack'
+    },
+    # ... your additional teams
+}
+```
