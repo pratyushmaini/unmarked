@@ -17,7 +17,7 @@ unmarked/
 ├── data/                   # Datasets for testing
 ├── methods/                # Blue Team's watermarking and detection methods
 │   ├── __init__.py
-│   └── watermarked_pipeline.py
+│   └── watermarked_diffusion_pipeline.py
 ├── metrics/                # Evaluation metrics
 │   ├── __init__.py
 │   ├── lpips_metric.py
@@ -47,8 +47,7 @@ unmarked/
 ```bash
 git clone https://github.com/yourusername/unmarked.git
 cd unmarked
-conda create -n unmarked python=3.11 -y
-pip install -r requirements.txt
+bash setup.sh
 ```
 
 
@@ -62,30 +61,13 @@ pip install -r requirements.txt
 
 #### Quick Code Exploration Commands
 
-1. **Run a Simple Battle with Baseline Teams**
+**Run a Simple Battle with Baseline Teams**
 
-   ```bash
-   python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt "A serene mountain landscape at sunrise"
-   ```
+```bash
+python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt "A serene mountain landscape at sunrise"
+```
 
-   - **Expected Outcome**: Generates an image without any watermarking or attack. No watermark should be detected.
-
-2. **Blue Team Adds Watermark, Red Team Does Not Attack**
-
-   ```bash
-   python main.py --red_team NoAttackTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
-   ```
-
-   - **Expected Outcome**: The image is watermarked by the Blue Team. The watermark should be detectable by the Blue Team's detection method.
-
-3. **Blue Team Adds Watermark, Red Team Attempts to Remove It**
-
-   ```bash
-   python main.py --red_team BaseRedTeam --blue_team BaseBlueTeam --prompt "A serene mountain landscape at sunrise"
-   ```
-
-   - **Expected Outcome**: The Red Team applies their attack to remove the watermark. Evaluate whether the watermark is still detectable and assess the image quality.
-
+- **Expected Outcome**: Generates an image without any watermarking or attack. No watermark should be detected.
 
 ### 3. Implement Your Strategy
 
@@ -118,49 +100,6 @@ pip install -r requirements.txt
 
   
 
-#### For Red Team (Attackers)
-
-- **Objective**: Develop attack methods to remove or obscure watermarks.
-- **Steps**:
-
-  1. **Create Your Attack Method**
-
-     - In `attacks/`, create a new file for your attack, e.g., `my_attack.py`.
-
-     ```python
-     # attacks/my_attack.py
-
-     from attacks.base_attack import BaseAttack
-     from PIL import Image
-
-     class MyAttack(BaseAttack):
-         def apply(self, image: Image) -> Image:
-             # Your attack logic here
-             return image
-     ```
-
-  2. **Register Your Attack in `registry.py`**
-
-     ```python
-     # registry.py
-
-     BASELINE_METHODS = {
-         'attacks': {
-             'BaseAttack': 'attacks.base_attack.BaseAttack',
-             'MyAttack': 'attacks.my_attack.MyAttack',
-         },
-         # ... other methods
-     }
-
-     # Register your team
-     STUDENT_TEAMS = {
-         'MyRedTeam': {
-             'type': 'red',
-             'attack_method': 'MyAttack',
-         },
-         # ... other teams
-     }
-     ```
 
 ### 3. Run Your Battle
 
