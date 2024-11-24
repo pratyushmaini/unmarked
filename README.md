@@ -101,44 +101,22 @@ pip install -r requirements.txt
      ```python
      # methods/my_watermarking.py
 
-     from methods.watermarked_pipeline import WatermarkedPipeline
+     from methods.watermarked_diffusion_pipeline import BaseWatermarkedDiffusionPipeline
 
-     class MyWatermarkedPipeline(WatermarkedPipeline):
+     class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
          def __init__(self, *args, **kwargs):
              super().__init__(*args, **kwargs)
 
-         def embed_watermark(self, latents, key):
+         def generate(self, prompt, key):
              # Your watermark embedding logic here
              return latents
 
-         def detect_watermark(self, image):
+         def detect(self, image):
              # Your watermark detection logic here
              return key
      ```
 
-  2. **Register Your Method in `registry.py`**
-
-     ```python
-     # registry.py
-
-     BASELINE_METHODS = {
-         'watermarking': {
-             'BaseWatermarkedPipeline': 'methods.watermarked_pipeline.WatermarkedPipeline',
-             'MyWatermarkedPipeline': 'methods.my_watermarking.MyWatermarkedPipeline',
-         },
-         # ... other methods
-     }
-
-     # Register your team
-     STUDENT_TEAMS = {
-         'MyBlueTeam': {
-             'type': 'blue',
-             'watermark_method': 'MyWatermarkedPipeline',
-             'detection_method': 'MyWatermarkedPipeline',
-         },
-         # ... other teams
-     }
-     ```
+  
 
 #### For Red Team (Attackers)
 
@@ -184,7 +162,7 @@ pip install -r requirements.txt
      }
      ```
 
-### 4. Run Your Battle
+### 3. Run Your Battle
 
 ```bash
 python main.py --red_team MyRedTeam --blue_team MyBlueTeam --prompt "A futuristic cityscape at night"
@@ -192,7 +170,7 @@ python main.py --red_team MyRedTeam --blue_team MyBlueTeam --prompt "A futuristi
 
 - **Expected Outcome**: The battle will use your custom watermarking and attack methods as registered in `registry.py`.
 
-### 5. Evaluate and Iterate
+### 4. Evaluate and Iterate
 
 - **Metrics**:
 
@@ -207,59 +185,9 @@ python main.py --red_team MyRedTeam --blue_team MyBlueTeam --prompt "A futuristi
   python metrics/lpips_metric.py --original outputs/BaseBlueTeam_watermarked.png --modified outputs/MyRedTeam_vs_MyBlueTeam.png
   ```
 
-### 6. Submit Your Work
+### 5. Submit Your Work
 
 - **Fork** the repository.
 - **Commit** your changes, ensuring that you only add new files or modify `registry.py` and your own method/attack files.
 - **Document** your strategies and findings in the README or a separate documentation file.
 - **Create a Pull Request** to submit your implementation for review.
-
-## Example: Registering Your Teams in `registry.py`
-
-```python
-# registry.py
-
-BASELINE_METHODS = {
-    'watermarking': {
-        'BaseWatermarkedPipeline': 'methods.watermarked_pipeline.WatermarkedPipeline',
-        'MyWatermarkedPipeline': 'methods.my_watermarking.MyWatermarkedPipeline',
-        # ... other methods
-    },
-    'detection': {
-        'BaseDetector': 'methods.watermarked_pipeline.WatermarkedPipeline',
-        'MyDetector': 'methods.my_watermarking.MyWatermarkedPipeline',
-        # ... other methods
-    },
-    'attacks': {
-        'BaseAttack': 'attacks.base_attack.BaseAttack',
-        'MyAttack': 'attacks.my_attack.MyAttack',
-        # ... other attacks
-    }
-}
-
-BASELINE_TEAMS = {
-    'BaseBlueTeam': {
-        'type': 'blue',
-        'watermark_method': 'BaseWatermarkedPipeline',
-        'detection_method': 'BaseDetector'
-    },
-    'BaseRedTeam': {
-        'type': 'red',
-        'attack_method': 'BaseAttack'
-    },
-    # ... other baseline teams
-}
-
-STUDENT_TEAMS = {
-    'MyBlueTeam': {
-        'type': 'blue',
-        'watermark_method': 'MyWatermarkedPipeline',
-        'detection_method': 'MyDetector'
-    },
-    'MyRedTeam': {
-        'type': 'red',
-        'attack_method': 'MyAttack'
-    },
-    # ... your additional teams
-}
-```
