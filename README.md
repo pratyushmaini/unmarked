@@ -68,7 +68,7 @@ bash setup.sh
 **Run a Simple Battle with Baseline Teams**
 
 ```bash
-python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt "A serene mountain landscape at sunrise"
+python main.py --red_team NoAttackTeam --blue_team NoWatermarkTeam --prompt data/debug_prompts.txt 
 ```
 
 - **Expected Outcome**: Generates an image without any watermarking or attack. No watermark should be detected.

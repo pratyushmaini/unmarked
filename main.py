@@ -12,8 +12,10 @@ def parse_args():
     parser.add_argument('--red_team', type=str, required=True, help="Name of the Red Team")
     parser.add_argument('--blue_team', type=str, required=True, help="Name of the Blue Team")
     parser.add_argument('--prompt_file', type=str, required=True, help="File containing prompts for image generation")
-    parser.add_argument('--output_dir', type=str, default='outputs', help="Directory to save outputs")
+    parser.add_argument('--output_dir', type=str, default='data', help="Directory to save outputs")
     parser.add_argument('--optimize_memory', action='store_true', help="Optimize model memory usage")
+    # compute_metrics?
+    parser.add_argument('--compute_metrics', action='store_true', help="Compute metrics for generated and attacked images")
     return parser.parse_args()
 
 
@@ -37,15 +39,15 @@ def main():
     attacked_images_dir = Path(args.output_dir) / "attacked_images"
 
     # Calculate metrics
-    metrics = calculate_metrics(generated_images_dir, attacked_images_dir, device)
-
-    # Report metrics
-    print("\n=== Metrics ===")
-    print(f"Average Generated Image Aesthetic Score: {metrics['aesthetic_generated']}")
-    print(f"Average Attacked Image Aesthetic Score: {metrics['aesthetic_attacked']}")
-    print(f"Average LPIPS Score: {metrics['lpips_score']}")
-    print(f"FID Score (Generated vs Reference): {metrics['fid_generated']}")
-    print(f"FID Score (Attacked vs Reference): {metrics['fid_attacked']}")
+    if args.compute_metrics:
+        metrics = calculate_metrics(generated_images_dir, attacked_images_dir, device)
+        # Report metrics
+        print("\n=== Metrics ===")
+        print(f"Average Generated Image Aesthetic Score: {metrics['aesthetic_generated']}")
+        print(f"Average Attacked Image Aesthetic Score: {metrics['aesthetic_attacked']}")
+        print(f"Average LPIPS Score: {metrics['lpips_score']}")
+        print(f"FID Score (Generated vs Reference): {metrics['fid_generated']}")
+        print(f"FID Score (Attacked vs Reference): {metrics['fid_attacked']}")
 
 
 if __name__ == "__main__":
