@@ -1,3 +1,6 @@
 #ignore all __pycache__ folder anywhere in the project
 __pycache__/
 *.png
+data/generated_images/*
+data/attacked_images/*
+outputs/
