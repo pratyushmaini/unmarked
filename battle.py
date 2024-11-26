@@ -9,7 +9,7 @@ from registry import BASELINE_METHODS, BASELINE_TEAMS, STUDENT_TEAMS
 class Battle:
     """Manages battles between Red and Blue teams"""
 
-    def __init__(self, output_dir='outputs', optimize_memory=False):
+    def __init__(self, output_dir="outputs", optimize_memory=False):
         self.logger = self._setup_logging()
         self.output_dir = Path(output_dir)
         self.generated_images_dir = Path("data/generated_images")
@@ -41,15 +41,15 @@ class Battle:
         blue_config = {**BASELINE_TEAMS, **STUDENT_TEAMS}.get(blue_team_name)
         red_config = {**BASELINE_TEAMS, **STUDENT_TEAMS}.get(red_team_name)
 
-        if not blue_config or blue_config['type'] != 'blue':
+        if not blue_config or blue_config["type"] != "blue":
             raise ValueError("Blue team not found or invalid")
-        if not red_config or red_config['type'] != 'red':
+        if not red_config or red_config["type"] != "red":
             raise ValueError("Red team not found or invalid")
 
         # Initialize Blue Team's Watermarked Diffusion Pipeline
-        wm_method_name = blue_config['watermark_method']
-        wm_method_path = BASELINE_METHODS['watermarking'][wm_method_name]
-        module_path, class_name = wm_method_path.rsplit('.', 1)
+        wm_method_name = blue_config["watermark_method"]
+        wm_method_path = BASELINE_METHODS["watermarking"][wm_method_name]
+        module_path, class_name = wm_method_path.rsplit(".", 1)
         module = import_module(module_path)
         WatermarkedPipelineClass = getattr(module, class_name)
 
@@ -61,7 +61,12 @@ class Battle:
         module_path, class_name = attack_path.rsplit('.', 1)
         module = import_module(module_path)
         AttackClass = getattr(module, class_name)
-        attack = AttackClass()
+        kwargs = {
+            k: v
+            for k, v in red_config.items()
+            if (k != "type" and k != "attack_method")
+        }
+        attack = AttackClass(**kwargs)
 
         for idx, prompt in enumerate(prompts):
             # Generate image with watermark
@@ -72,7 +77,9 @@ class Battle:
 
             # Apply Red Team's attack
             attacked_image = attack.apply(generated_image)
-            attacked_image_path = self.attacked_images_dir / f"attacked_image_{idx}.png"
+            attacked_image_path = (
+            self.attacked_images_dir / f"attacked_image_{idx}.png"
+        )
             attacked_image.save(attacked_image_path)
             self.logger.info(f"Attacked image saved to {attacked_image_path}")
 
