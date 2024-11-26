@@ -1,3 +1,5 @@
+lpips
+clean-fid
 torch
 transformers
 accelerate

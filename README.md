@@ -2,6 +2,10 @@
 
 **Unmarked** is a benchmark challenge focused on washing out image watermarks embedded within the outputs of the Stable Diffusion XL (SDXL) model. Participants will engage in a Red Team vs. Blue Team scenario, where the Blue Team embeds watermarks into the generated images, and the Red Team attempts to remove these watermarks under certain constraints.
 
+## Attribution
+This repository massively benefits from the work of An et. al. on [WAVES: Benchmarking the Robustness of Image Watermarks](https://wavesbench.github.io/). This benchmark was later adopted as a [challenge at NeurIPS 2024](https://erasinginvisible.github.io/). This repo simplifies the challenge, and gives it a blue team focus, departing from the original red team focus.
+
+
 ## Objective
 
 - **Blue Team (Defenders)**: Implement robust watermarking techniques within the diffusion model that are difficult for the Red Team to remove without significantly degrading image quality. They additionally need to find the "key" that was embedded in the image. The key is an integer between 0 and 100.
