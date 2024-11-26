@@ -1,0 +1,3 @@
+#ignore all __pycache__ folder anywhere in the project
+__pycache__/
+*.png

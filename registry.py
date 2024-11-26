@@ -3,6 +3,8 @@
 BASELINE_METHODS = {
     'watermarking': {
         'BaseWatermarkedDiffusionPipeline': 'methods.watermarked_diffusion_pipeline.BaseWatermarkedDiffusionPipeline',
+        'NoWatermarkPipeline': 'methods.no_watermark_pipeline.NoWatermarkPipeline',
+        'OutputPixelWatermarking': 'methods.output_pixel_watermarking.OutputPixelWatermarking',
     },
     'attacks': {
         'NoAttack': 'attacks.base_attack.NoAttack',
@@ -13,7 +15,11 @@ BASELINE_METHODS = {
 BASELINE_TEAMS = {
     'NoWatermarkTeam': {
         'type': 'blue',
-        'watermark_method': 'BaseWatermarkedDiffusionPipeline'
+        'watermark_method': 'NoWatermarkPipeline'
+    },
+    'BaseBlueTeam': {
+        'type': 'blue',
+        'watermark_method': 'OutputPixelWatermarking'
     },
     'NoAttackTeam': {
         'type': 'red',
@@ -23,5 +29,9 @@ BASELINE_TEAMS = {
 }
 
 STUDENT_TEAMS = {
+    'OutputPixelTeam': {
+        'type': 'blue',
+        'watermark_method': 'OutputPixelWatermarking'
+    },
     # Register your teams here
 }
