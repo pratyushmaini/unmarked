@@ -14,7 +14,7 @@ BASELINE_METHODS = {
 BASELINE_TEAMS = {
     'NoWatermarkTeam': {
         'type': 'blue',
-        'watermark_method': 'NoWatermarkPipeline'
+        'watermark_method': 'BaseWatermarkedDiffusionPipeline'
     },
     'BaseBlueTeam': {
         'type': 'blue',
