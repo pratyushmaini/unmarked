@@ -3,7 +3,6 @@
 BASELINE_METHODS = {
     'watermarking': {
         'BaseWatermarkedDiffusionPipeline': 'methods.watermarked_diffusion_pipeline.BaseWatermarkedDiffusionPipeline',
-        'NoWatermarkPipeline': 'methods.no_watermark_pipeline.NoWatermarkPipeline',
         'OutputPixelWatermarking': 'methods.output_pixel_watermarking.OutputPixelWatermarking',
     },
     'attacks': {
