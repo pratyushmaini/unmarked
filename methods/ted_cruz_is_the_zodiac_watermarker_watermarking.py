@@ -17,6 +17,8 @@ import torchvision.transforms as transforms
 from diffusers import DDIMScheduler
 from diffusers.utils.torch_utils import randn_tensor
 
+import os
+
 
 class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
     def __init__(self, *args, **kwargs):
@@ -49,21 +51,23 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             "ssim_threshold": 0.92,
             "detect_threshold": 0.9,
         }
+        self.device_obj = torch.device(self.device)
 
     def generate(self, prompt, key):
         # Your watermark embedding logic here
         print("Step 1: Generate image from prompt with SDXL")
-        # self.generate_image(prompt)
-        # torch.cuda.empty_cache()
+        self.generate_image(prompt)
+        torch.cuda.empty_cache()
 
         print("Step 2: Embed key in image with ZoDiac method")
         print("Step 2a: Load watermark and diffusion pipeline")
-        self.wm_pipe = KeyedGTWatermark(self.device, key=key, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device).manual_seed(self.zodiac_cfgs['w_seed']))
-        self.wm_sd_pipe = WMDetectStableDiffusionPipeline.from_pretrained(self.zodiac_cfgs['model_id'], scheduler=DDIMScheduler.from_pretrained(self.zodiac_cfgs['model_id'], subfolder="scheduler")).to(device)
+        self.wm_pipe = KeyedGTWatermark(self.device_obj, key=key, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device_obj).manual_seed(self.zodiac_cfgs['w_seed']))
+        scheduler = DDIMScheduler.from_pretrained(self.zodiac_cfgs['model_id'], subfolder="scheduler")
+        self.wm_sd_pipe = WMDetectStableDiffusionPipeline.from_pretrained(self.zodiac_cfgs['model_id'], scheduler=scheduler).to(torch.device('cuda'))
 
         print("Step 2b: Load generated image")
         imagename = self.intermediate_name
-        gt_img_tensor = get_img_tensor(f'{self.save_path}/{imagename}', self.device)
+        gt_img_tensor = get_img_tensor(f'{self.save_path}/{imagename}', self.device_obj)
 
         print("Step 2c: Get init noise")    
         def get_init_latent(img_tensor, pipe, text_embeddings, guidance_scale=1.0):
@@ -86,7 +90,7 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         optimizer = optim.Adam([init_latents], lr=0.01)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.3) 
 
-        totalLoss = LossProvider(self.zodiac_cfgs['loss_weights'], self.device)
+        totalLoss = LossProvider(self.zodiac_cfgs['loss_weights'], self.device_obj)
         loss_lst = [] 
 
         print("Step 2e: Train init latents") 
@@ -126,6 +130,8 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         return results["detected_key"]
     
     def generate_image(self, prompt, **generate_kwargs) -> None:
+        if not os.path.exists("./methods/output"):
+            os.mkdir("./methods/output")
         image = self.model(
             prompt=prompt,
             num_inference_steps=4,
