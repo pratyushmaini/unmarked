@@ -22,8 +22,11 @@ import os
 
 class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.intermediate_name = "intermediate.tiff"
+        # super().__init__(*args, **kwargs)
+        # self.model.enable_model_cpu_offload()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print("SDXL pipeline loaded")
+        self.intermediate_name = "intermediate.png"
         self.save_path = "methods/output"
         self.zodiac_cfgs = {
             # general
@@ -56,14 +59,18 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
     def generate(self, prompt, key):
         # Your watermark embedding logic here
         print("Step 1: Generate image from prompt with SDXL")
+        self.model = self.load_pipeline()
         self.generate_image(prompt)
+        del self.model
         torch.cuda.empty_cache()
 
         print("Step 2: Embed key in image with ZoDiac method")
         print("Step 2a: Load watermark and diffusion pipeline")
-        self.wm_pipe = KeyedGTWatermark(self.device_obj, key=key, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device_obj).manual_seed(self.zodiac_cfgs['w_seed']))
         scheduler = DDIMScheduler.from_pretrained(self.zodiac_cfgs['model_id'], subfolder="scheduler")
         self.wm_sd_pipe = WMDetectStableDiffusionPipeline.from_pretrained(self.zodiac_cfgs['model_id'], scheduler=scheduler).to(torch.device('cuda'))
+        # self.wm_sd_pipe.enable_model_cpu_offload()
+        self.key = key
+        self.wm_pipe = KeyedGTWatermark(self.device_obj, key=key, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device_obj).manual_seed(self.zodiac_cfgs['w_seed']))
 
         print("Step 2b: Load generated image")
         imagename = self.intermediate_name
@@ -101,6 +108,7 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
                 pred_img_tensor = self.wm_sd_pipe('', guidance_scale=1.0, num_inference_steps=50, output_type='tensor', use_trainable_latents=True, init_latents=init_latents_wm).images
             else:
                 pred_img_tensor = self.wm_sd_pipe(prompt, num_inference_steps=50, output_type='tensor', use_trainable_latents=True, init_latents=init_latents_wm).images
+            # init_latents_wm = init_latents_wm.to(torch.float32)
             loss = totalLoss(pred_img_tensor, gt_img_tensor, init_latents_wm, self.wm_pipe)
             
             optimizer.zero_grad()
@@ -110,10 +118,7 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
 
             loss_lst.append(loss.item())
         torch.cuda.empty_cache()
-        
-        save_img(f"{self.save_path}/output.tiff", pred_img_tensor, self.wm_sd_pipe)
-        pil_img = pipe.numpy_to_pil(self.wm_sd_pipe.img_tensor_to_numpy(pred_img_tensor))[0]
-
+        pil_img = save_img(f"{self.save_path}/output.png", pred_img_tensor, self.wm_sd_pipe)
         return pil_img
 
     def detect(self, image):
@@ -127,6 +132,9 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             device=self.device
         )
         print(results)
+        del self.wm_sd_pipe
+        torch.cuda.empty_cache()
+
         return results["detected_key"]
     
     def generate_image(self, prompt, **generate_kwargs) -> None:
@@ -144,3 +152,4 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
 if __name__ == "__main__":
     pipe = MyWatermarkedPipeline()
     pipe.generate("a pokemon", 9)
+    pipe.detect("methods/output/output.png")

@@ -147,7 +147,7 @@ class KeyedGTWatermark(GTWatermark):
             modifier = 2.0 if bit == '1' else 0.5
             channel_mask = torch.zeros_like(latents_fft, dtype=torch.bool)
             channel_mask[:, self.w_channel:self.w_channel+1] = ring_mask
-            print(channel_mask)
+            # print(channel_mask)
             
             # Apply modification
             latents_fft = torch.where(channel_mask, 
@@ -180,7 +180,7 @@ class KeyedGTWatermark(GTWatermark):
                 'threshold': np.mean(ring_amplitudes) * 1.5
             }
             ring_stats.append(stats)
-        print(ring_stats)
+        # print(ring_stats)
         return ring_stats
 
     def _get_ring_mask(self, size, radius):
@@ -206,7 +206,7 @@ class KeyedGTWatermark(GTWatermark):
             channel_data = latents_fft[:, self.w_channel:self.w_channel+1]
             masked_data = channel_data[ring_mask]
 
-            print(masked_data)
+            # print(masked_data)
             
             # Calculate amplitude
             ring_amplitude = torch.abs(masked_data).mean().item()

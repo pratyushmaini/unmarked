@@ -17,7 +17,7 @@ class LossProvider(nn.Module):
 
         # add perceptive loss
         loss_percep = WatsonDistanceVgg(reduction='sum')
-        loss_percep.load_state_dict(torch.load('./loss/rgb_watson_vgg_trial0.pth', map_location='cpu'))
+        loss_percep.load_state_dict(torch.load('./methods/ZoDiac/loss/rgb_watson_vgg_trial0.pth', map_location='cpu'))
         loss_percep = loss_percep.to(device)
         self.loss_per = lambda pred_img, gt_img: loss_percep((1+pred_img)/2.0, (1+gt_img)/2.0)/ pred_img.shape[0]
 

@@ -47,10 +47,11 @@ def show_latent_and_final_img(latent: torch.Tensor, img: torch.Tensor, pipe):
 def save_img(path, img: torch.Tensor, pipe):
     pil_img = pipe.numpy_to_pil(pipe.img_tensor_to_numpy(img))[0]
     pil_img.save(path)
-    return
+    return pil_img
 
 def get_img_tensor(img_path, device):
-    img_tensor = pil_to_tensor(Image.open(img_path).convert("RGB"))/255
+    img = Image.open(img_path).convert("RGB").resize((512, 512), Image.Resampling.LANCZOS)
+    img_tensor = pil_to_tensor(img)/255
     return img_tensor.unsqueeze(0).to(device)
 
 def create_output_folder(cfgs):
