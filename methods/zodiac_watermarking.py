@@ -57,10 +57,11 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         self.device_obj = torch.device(self.device)
 
     def generate(self, prompt, key):
+        self.prompt = prompt
         # Your watermark embedding logic here
         print("Step 1: Generate image from prompt with SDXL")
         self.model = self.load_pipeline()
-        self.generate_image(prompt)
+        self.generate_image(self.prompt)
         del self.model
         torch.cuda.empty_cache()
 
@@ -88,7 +89,7 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             )
             return reversed_latents
 
-        empty_text_embeddings = self.wm_sd_pipe.get_text_embedding('')
+        empty_text_embeddings = self.wm_sd_pipe.get_text_embedding(self.prompt)
         init_latents_approx = get_init_latent(gt_img_tensor, self.wm_sd_pipe, empty_text_embeddings)
 
         print("Step 2d: Prepare training")  
@@ -123,7 +124,7 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
 
     def detect(self, image):
         # Your watermark detection logic here
-        text_embeddings = self.wm_sd_pipe.get_text_embedding("")
+        text_embeddings = self.wm_sd_pipe.get_text_embedding(self.prompt)
         results = detect_keyed_watermark(
             image,
             self.wm_sd_pipe,
