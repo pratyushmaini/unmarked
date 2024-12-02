@@ -19,7 +19,6 @@ from diffusers.utils.torch_utils import randn_tensor
 
 import os
 
-
 class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
     def __init__(self, *args, **kwargs):
         # super().__init__(*args, **kwargs)
@@ -36,18 +35,18 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             # for stable diffusion
             "model_id": 'stabilityai/stable-diffusion-2-1-base',
             "gen_seed": 0,  # the seed for generating gt image; no use for watermarking existing imgs
-            "empty_prompt": True, # whether to use the caption of the image
+            "empty_prompt": False, # whether to use the caption of the image
 
             # for watermark
             "w_type": 'single', # single or multi
             "w_channel": 3,
-            "w_radius": 10,
+            "w_radius": 8,
             "w_seed": 10,
 
             # for updating
             "start_latents": 'init_w', # 'init', 'init_w', 'rand', 'rand_w'
-            "iters": 10,
-            "save_iters": [10],
+            "iters": 30,
+            "save_iters": [30],
             "loss_weights": [10.0, 0.1, 1.0, 0.0], # L2 loss, watson-vgg loss, SSIM loss, watermark L1 loss
 
             # for postprocessing and detection
@@ -120,11 +119,42 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             loss_lst.append(loss.item())
         torch.cuda.empty_cache()
         pil_img = save_img(f"{self.save_path}/zodiac_output.png", pred_img_tensor, self.wm_sd_pipe)
+
+        print('Step 2f: Postprocessing with adaptive enhancement')
+        ssim_threshold = self.zodiac_cfgs['ssim_threshold']
+        wm_img_tensor = get_img_tensor(f"{self.save_path}/zodiac_output.png", self.device_obj)
+        ssim_value = ssim(wm_img_tensor, gt_img_tensor).item()
+
+        def binary_search_theta(threshold, lower=0., upper=1., precision=1e-6, max_iter=1000):
+            for i in range(max_iter):
+                mid_theta = (lower + upper) / 2
+                img_tensor = (gt_img_tensor-wm_img_tensor)*mid_theta+wm_img_tensor
+                ssim_value = ssim(img_tensor, gt_img_tensor).item()
+
+                if ssim_value <= threshold:
+                    lower = mid_theta
+                else:
+                    upper = mid_theta
+                if upper - lower < precision:
+                    break
+            return lower
+
+        optimal_theta = binary_search_theta(ssim_threshold, precision=0.01)
+        print(f'Optimal Theta {optimal_theta}')
+
+        img_tensor = (gt_img_tensor-wm_img_tensor)*optimal_theta+wm_img_tensor
+
+        ssim_value = ssim(img_tensor, gt_img_tensor).item()
+        psnr_value = compute_psnr(img_tensor, gt_img_tensor)
+        pil_img = save_img(f"{self.save_path}/zodiac_output_processed.png", img_tensor, self.wm_sd_pipe)
+        print(f'SSIM {ssim_value}, PSNR, {psnr_value} after postprocessing')
+        
         return pil_img
 
+
     def detect(self, image):
-        # Your watermark detection logic here
-        text_embeddings = self.wm_sd_pipe.get_text_embedding(self.prompt)
+        # do not assume access to prompts at detection time
+        text_embeddings = self.wm_sd_pipe.get_text_embedding('')
         results = detect_keyed_watermark(
             image,
             self.wm_sd_pipe,

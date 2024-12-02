@@ -133,9 +133,10 @@ class KeyedGTWatermark(GTWatermark):
         """Override parent's inject_watermark to include key encoding"""
         latents_fft = torch.fft.fftshift(torch.fft.fft2(latents), dim=(-1, -2))
         
-        # Convert key to binary and pad to w_radius length
+        # Convert key to binary and pad to 7 length length
         key_bits = format(self.key, 'b').zfill(self.w_radius)
-        
+        print("key_bits = ", key_bits)
+
         # Apply key-based watermark
         for i, bit in enumerate(key_bits):
             radius = i + 1
@@ -211,17 +212,20 @@ class KeyedGTWatermark(GTWatermark):
             # Calculate amplitude
             ring_amplitude = torch.abs(masked_data).mean().item()
             normalized_amp = (ring_amplitude - self.ring_stats[i]['mean']) / self.ring_stats[i]['std']
-            print(ring_amplitude, normalized_amp)
+            print(normalized_amp)
             
-            bit = '1' if normalized_amp > 1.5 else '0'
+            # this 0.5 threshold is set empirically :)
+            bit = '1' if normalized_amp > 0.5 else '0'
             confidence = abs(normalized_amp)
             
             detected_bits.append(bit)
             confidence_scores.append(confidence)
+        
+        print("detected bits raw = ", detected_bits)
+        print("confidence scores = ", confidence_scores)
 
-        # Apply confidence threshold
-        reliable_bits = [b if c > 2.0 else '0' for b, c in zip(detected_bits, confidence_scores)]
-        return int(''.join(reliable_bits), 2)
+        return int(''.join(detected_bits), 2)
+
 
     def evaluate_key_detection(self, latents):
         """Evaluate key detection with confidence metrics"""
@@ -229,13 +233,13 @@ class KeyedGTWatermark(GTWatermark):
         watermark_prob = 1 - self.tree_ring_p_value(latents)
         
         # Compare with original key
-        original_bits = format(self.key, 'b').zfill(self.w_radius)
-        detected_bits = format(detected_key, 'b').zfill(self.w_radius)
+        original_bits = format(self.key, '07b')
+        detected_bits = format(detected_key, '07b')
+
         bit_accuracy = sum(a == b for a, b in zip(original_bits, detected_bits)) / len(original_bits)
         
         return {
             'detected_key': detected_key,
-            'watermark_probability': watermark_prob,
+            'original_key': self.key,
             'bit_accuracy': bit_accuracy,
-            'confidence': bit_accuracy * watermark_prob
         }
