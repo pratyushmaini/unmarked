@@ -1,16 +1,16 @@
 # methods/my_watermarking.py
 
-from watermarked_diffusion_pipeline import BaseWatermarkedDiffusionPipeline
+from methods.watermarked_diffusion_pipeline import BaseWatermarkedDiffusionPipeline
 import numpy as np
 from scipy.stats import norm
 import scipy
 import torch
 import torch.optim as optim
-from ZoDiac.main.wmdiffusion import WMDetectStableDiffusionPipeline
-from ZoDiac.main.wmpatch import GTWatermark, GTWatermarkMulti, KeyedGTWatermark
-from ZoDiac.main.utils import *
-from ZoDiac.loss.loss import LossProvider
-from ZoDiac.loss.pytorch_ssim import ssim
+from methods.ZoDiac.main.wmdiffusion import WMDetectStableDiffusionPipeline
+from methods.ZoDiac.main.wmpatch import GTWatermark, GTWatermarkMulti, KeyedGTWatermark
+from methods.ZoDiac.main.utils import *
+from methods.ZoDiac.loss.loss import LossProvider
+from methods.ZoDiac.loss.pytorch_ssim import ssim
 
 import torch
 import torchvision.transforms as transforms
@@ -20,13 +20,13 @@ from diffusers.utils.torch_utils import randn_tensor
 import os
 
 
-class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
+class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
     def __init__(self, *args, **kwargs):
         # super().__init__(*args, **kwargs)
         # self.model.enable_model_cpu_offload()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print("SDXL pipeline loaded")
-        self.intermediate_name = "intermediate.png"
+        self.intermediate_name = "zodiac_intermediate.png"
         self.save_path = "methods/output"
         self.zodiac_cfgs = {
             # general
@@ -118,7 +118,7 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
 
             loss_lst.append(loss.item())
         torch.cuda.empty_cache()
-        pil_img = save_img(f"{self.save_path}/output.png", pred_img_tensor, self.wm_sd_pipe)
+        pil_img = save_img(f"{self.save_path}/zodiac_output.png", pred_img_tensor, self.wm_sd_pipe)
         return pil_img
 
     def detect(self, image):
@@ -148,8 +148,3 @@ class MyWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         ).images[0]
 
         image.save(f"{self.save_path}/{self.intermediate_name}")
-
-if __name__ == "__main__":
-    pipe = MyWatermarkedPipeline()
-    pipe.generate("a pokemon", 9)
-    pipe.detect("methods/output/output.png")

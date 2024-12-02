@@ -137,6 +137,9 @@ def detect_keyed_watermark(img, dect_pipe, wm_pipe, text_embeddings, device=torc
         img_tensor = img_tensor.unsqueeze(0).to(device)
     elif isinstance(img, torch.Tensor):
         img_tensor = img
+    elif isinstance(img, Image.Image):
+        img_tensor = pil_to_tensor(img.convert("RGB"))/255
+        img_tensor = img_tensor.unsqueeze(0).to(device)
 
     # Get latents through detection pipeline
     img_latents = dect_pipe.get_image_latents(img_tensor, sample=False)
