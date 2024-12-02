@@ -4,6 +4,7 @@ BASELINE_METHODS = {
     "watermarking": {
         "BaseWatermarkedDiffusionPipeline": "methods.watermarked_diffusion_pipeline.BaseWatermarkedDiffusionPipeline",
         "OutputPixelWatermarking": "methods.output_pixel_watermarking.OutputPixelWatermarking",
+        "ZodiacWatermarking": "methods.zodiac_watermarking.ZodiacWatermarkedPipeline"
     },
     "attacks": {
         "NoAttack": "attacks.base_attack.NoAttack",
@@ -20,6 +21,7 @@ BASELINE_TEAMS = {
     },
     "BaseBlueTeam": {"type": "blue", "watermark_method": "OutputPixelWatermarking"},
     "NoAttackTeam": {"type": "red", "attack_method": "NoAttack"},
+    "ZodiacWatermarkTeam": {"type": "blue", "watermark_method": "ZodiacWatermarking"}
     # Add other baseline teams here
 }
 
@@ -36,4 +38,8 @@ STUDENT_TEAMS = {
         "distortion_types": ["noise", "compression"],
     },
     # Register your teams here
+    "ZodiacWatermarkTeam": {
+        "type": "blue",
+        "watermark_method": "ZodiacWatermarking"
+    }
 }

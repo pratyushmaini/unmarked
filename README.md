@@ -134,3 +134,19 @@ python main.py --red_team MyRedTeam --blue_team MyBlueTeam --prompt "A futuristi
 - **Commit** your changes, ensuring that you only add new files or modify `registry.py` and your own method/attack files.
 - **Document** your strategies and findings in the README or a separate documentation file.
 - **Create a Pull Request** to submit your implementation for review.
+
+# Documentation
+
+We implemented the ZoDiac watermarking approach, as described in [Attack-Resilient Image Watermarking Using Stable Diffusion](https://arxiv.org/pdf/2401.04247). We adapted the authors' [code](https://github.com/zhanglijun95/ZoDiac) to work with a pre-generated image from our SDXL model, and to encode a watermark based on a provided integer key.
+
+The ZoDiac approach first identifies the latent vector corresponding to a given image. It converts the vector into Fourier space and encodes a target-like watermark. We adapted the watermark to encode the bit string of the integer key into
+the amplitude of each concentric ring: high amplitude for set bits, and low for unset bits. Finally, the approach then optimizes the encoded latent by minimizing the reconstruction error between it (after it is converted back from Fourier space) and the original image. 
+
+Detection works by inverting an image into latent space, converting it into Fourier 
+space, and performing a statistical test for the presence of a watermark. We also
+added key detection by thresholding the normalized amplitude of each ring in the watermark.
+
+Given that we did not have much time for the project, we were unable to adapt the ZoDiac repo for the SDXL model and instead used the default stable diffusion model for the prebuilt pipeline. 
+
+
+
