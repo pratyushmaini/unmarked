@@ -40,13 +40,13 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             # for watermark
             "w_type": 'single', # single or multi
             "w_channel": 3,
-            "w_radius": 8,
+            "w_radius": 3,
             "w_seed": 10,
 
             # for updating
             "start_latents": 'init_w', # 'init', 'init_w', 'rand', 'rand_w'
-            "iters": 30,
-            "save_iters": [30],
+            "iters": 10,
+            "save_iters": [10],
             "loss_weights": [10.0, 0.1, 1.0, 0.0], # L2 loss, watson-vgg loss, SSIM loss, watermark L1 loss
 
             # for postprocessing and detection
