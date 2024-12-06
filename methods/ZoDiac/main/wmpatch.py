@@ -123,64 +123,15 @@ class GTWatermarkMulti(GTWatermark):
     #     l1_metric = sampled_elements.mean().item()
     #     return l1_metric
 
-class KeyedGTWatermark(GTWatermark):
-    def __init__(self, device, key, shape=(1,4,64,64), dtype=torch.float32, w_channel=3, w_radius=10, generator=None):
+
+class KeyedGTWatermarkStatistical(GTWatermark):
+    def __init__(self, device, shape=(1,4,64,64), dtype=torch.float32, w_channel=3, w_radius=10, generator=None):
         super().__init__(device, shape, dtype, w_channel, w_radius, generator)
-        self.key = key
-        self.ring_stats = self._compute_ring_statistics()
-
-    def inject_watermark(self, latents):
-        """Override parent's inject_watermark to include key encoding"""
-        latents_fft = torch.fft.fftshift(torch.fft.fft2(latents), dim=(-1, -2))
         
-        # Convert key to binary and pad to 7 length length
-        key_bits = format(self.key, '03b')
-        print("key_bits = ", key_bits)
-
-        full_mask = torch.zeros_like(latents_fft)
-        modifiers = torch.ones_like(latents_fft)    
-        # Apply key-based watermark
-        for i, bit in enumerate(key_bits):
-            radius = i + 1
-            ring_mask = self._get_ring_mask(latents_fft.shape[-1], radius)
-            ring_mask = ring_mask.unsqueeze(0).unsqueeze(0)
-            ring_mask = ring_mask.expand(latents_fft.shape[0], 1, -1, -1)
-
-            modifier = 2.0 if bit == '1' else 0.5
-            modifiers[:, self.w_channel:self.w_channel+1][ring_mask] = modifier
-            
-            # Reconstruct complex values
-            # latents_fft[:, self.w_channel:self.w_channel+1] = new_amp * torch.exp(1j * phase)
-
-        modified_fft = latents_fft * modifiers
-        # Convert back to spatial domain
-        latents_w = torch.fft.ifft2(torch.fft.ifftshift(modified_fft, dim=(-1, -2))).real
-        return latents_w
-
-    def _compute_ring_statistics(self):
-        """Compute statistical thresholds for each ring"""
-        ring_stats = []
-        num_samples = 10000
-        
-        for i in range(self.w_radius):
-            ring_amplitudes = []
-            for _ in range(num_samples):
-                rand_latents = randn_tensor(self.shape, device=self.device, dtype=self.dtype)
-                rand_fft = torch.fft.fftshift(torch.fft.fft2(rand_latents), dim=(-1, -2))
-                
-                radius = i + 1
-                ring_mask = self._get_ring_mask(rand_fft.shape[-1], radius)
-                ring_amp = torch.abs(rand_fft[:, self.w_channel, ring_mask]).mean().item()
-                ring_amplitudes.append(ring_amp)
-            
-            stats = {
-                'mean': np.mean(ring_amplitudes),
-                'std': np.std(ring_amplitudes),
-                'threshold': np.mean(ring_amplitudes) * 1.5
-            }
-            ring_stats.append(stats)
-        # print(ring_stats)
-        return ring_stats
+        # Generate 8 different watermark patterns
+        self.watermark_patterns = []
+        self.pattern_stats = []
+        self._precompute_patterns_and_stats()
 
     def _get_ring_mask(self, size, radius):
         """Get mask for a specific ring"""
@@ -188,53 +139,88 @@ class KeyedGTWatermark(GTWatermark):
         inner = self._circle_mask(size, r=radius-1)
         return torch.tensor(np.logical_xor(outer, inner)).to(self.device)
 
-    def _detect_key(self, latents):
-        latents_fft = torch.fft.fftshift(torch.fft.fft2(latents), dim=(-1, -2))
-        detected_bits = []
-        confidence_scores = []
+    def _precompute_patterns_and_stats(self):
+        """Generate 8 distinct watermark patterns and compute their statistics"""
+        for k in range(8):
+            # Generate complex Gaussian pattern CN(0,1)
+            gt_init = randn_tensor(self.shape, device=self.device, dtype=self.dtype)
+            W = self._get_watermarking_pattern(gt_init)
+            
+            self.watermark_patterns.append(W)
+            
+            # Compute statistics for this pattern
+            stats = self._compute_pattern_stats(W)
+            self.pattern_stats.append(stats)
 
-        for i in range(self.w_radius):
-            radius = i + 1
-            ring_mask = self._get_ring_mask(latents_fft.shape[-1], radius)
-            
-            # Expand mask to match tensor dimensions
-            ring_mask = ring_mask.unsqueeze(0).unsqueeze(0)  # Add batch and channel dims
-            ring_mask = ring_mask.expand(latents_fft.shape[0], 1, -1, -1)
-            
-            # Get ring amplitude
-            ring_amp = torch.abs(latents_fft[:, self.w_channel:self.w_channel+1][ring_mask]).mean()
-            expected_0_amp = self.ring_stats[i]['mean'] * 0.5
-            expected_1_amp = self.ring_stats[i]['mean'] * 2.0
-            
-            # Compare distances to expected amplitudes
-            dist_to_0 = abs(ring_amp - expected_0_amp).item()
-            dist_to_1 = abs(ring_amp - expected_1_amp).item()
-            
-            bit = '1' if dist_to_1 < dist_to_0 else '0'
-            confidence = abs(dist_to_0 - dist_to_1) / (dist_to_0 + dist_to_1)
-            
-            detected_bits.append(bit)
-            confidence_scores.append(confidence)
-            print(dist_to_0, dist_to_1, expected_0_amp, expected_1_amp)
+    def _compute_pattern_stats(self, pattern, num_samples=1000):
+        """Compute statistical properties against random latents"""
+        M = self._get_watermarking_mask(pattern)
+        distances = []
         
-        print("detected bits raw = ", detected_bits)
+        for _ in range(num_samples):
+            rand_latents = randn_tensor(self.shape, device=self.device, dtype=self.dtype)
+            rand_fft = torch.fft.fftshift(torch.fft.fft2(rand_latents), dim=(-1, -2))
+            l1_metric = torch.abs(rand_fft[M] - pattern[M]).mean().item()
 
-        return int(''.join(detected_bits), 2)
+            distances.append(l1_metric)
+            
+        return {
+            'mean': np.mean(distances),
+            'std': np.std(distances),
+            'threshold': np.percentile(distances, 90)
+        }
 
+    def inject_watermark(self, latents, key):
+        """Inject key-specific watermark pattern"""
+        latents_fft = torch.fft.fftshift(torch.fft.fft2(latents), dim=(-1, -2))
+        
+        # Get watermark pattern for current key
+        W = self.watermark_patterns[key]
+        M = self._get_watermarking_mask(W)
+        
+        latents_fft = latents_fft * ~(M) + W * M
+        latents_w = torch.fft.ifft2(torch.fft.ifftshift(latents_fft, dim=(-1, -2))).real
+        return latents_w
+
+    def _detect_key(self, latents):
+        """Detect key using statistical testing against all patterns"""
+        latents_fft = torch.fft.fftshift(torch.fft.fft2(latents), dim=(-1, -2))
+        # y = latents_fft[:, self.w_channel]
+        
+        # min_p_value = 1.0
+        maxconf = 0
+        detected_key = None
+        
+        # Test against all watermark patterns
+        for k in range(8):
+            W = self.watermark_patterns[k]
+            M = self._get_watermarking_mask(W)
+            l1_metric = torch.abs(latents_fft[M] - W[M]).mean().item()
+            
+            conf = abs(0.5 - norm.cdf(l1_metric, self.pattern_stats[k]['mean'], self.pattern_stats[k]['std']**2))*2
+            
+            if conf > maxconf:
+                maxconf = conf
+                detected_key = k
+            print(k, conf)
+
+        return detected_key, maxconf
 
     def evaluate_key_detection(self, latents):
         """Evaluate key detection with confidence metrics"""
-        detected_key = self._detect_key(latents)
+        detected_key, conf = self._detect_key(latents)
         watermark_prob = 1 - self.tree_ring_p_value(latents)
         
-        # Compare with original key
-        original_bits = format(self.key, '03b')
+        if detected_key is None:
+            return {
+                'detected_key': None,
+                'bit_accuracy': 0.0,
+                'confidence': 0.0
+            }
+            
         detected_bits = format(detected_key, '03b')
 
-        bit_accuracy = sum(a == b for a, b in zip(original_bits, detected_bits)) / len(original_bits)
-        
         return {
             'detected_key': detected_key,
-            'original_key': self.key,
-            'bit_accuracy': bit_accuracy,
+            'confidence': conf
         }

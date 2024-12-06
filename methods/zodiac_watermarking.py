@@ -40,13 +40,13 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
             # for watermark
             "w_type": 'single', # single or multi
             "w_channel": 3,
-            "w_radius": 3,
+            "w_radius": 10,
             "w_seed": 10,
 
             # for updating
             "start_latents": 'init_w', # 'init', 'init_w', 'rand', 'rand_w'
-            "iters": 10,
-            "save_iters": [10],
+            "iters": 50,
+            "save_iters": [50],
             "loss_weights": [10.0, 0.1, 1.0, 0.0], # L2 loss, watson-vgg loss, SSIM loss, watermark L1 loss
 
             # for postprocessing and detection
@@ -70,7 +70,7 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         self.wm_sd_pipe = WMDetectStableDiffusionPipeline.from_pretrained(self.zodiac_cfgs['model_id'], scheduler=scheduler).to(torch.device('cuda'))
         # self.wm_sd_pipe.enable_model_cpu_offload()
         self.key = key
-        self.wm_pipe = KeyedGTWatermark(self.device_obj, key=key, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device_obj).manual_seed(self.zodiac_cfgs['w_seed']))
+        self.wm_pipe = KeyedGTWatermarkStatistical(self.device_obj, w_channel=self.zodiac_cfgs['w_channel'], w_radius=self.zodiac_cfgs['w_radius'], generator=torch.Generator(self.device_obj).manual_seed(self.zodiac_cfgs['w_seed']))
 
         print("Step 2b: Load generated image")
         imagename = self.intermediate_name
@@ -103,7 +103,7 @@ class ZodiacWatermarkedPipeline(BaseWatermarkedDiffusionPipeline):
         print("Step 2e: Train init latents") 
         for i in range(self.zodiac_cfgs['iters']):
             print(f"iter {i}:")
-            init_latents_wm = self.wm_pipe.inject_watermark(init_latents)
+            init_latents_wm = self.wm_pipe.inject_watermark(init_latents, key)
             if self.zodiac_cfgs['empty_prompt']:
                 pred_img_tensor = self.wm_sd_pipe('', guidance_scale=1.0, num_inference_steps=50, output_type='tensor', use_trainable_latents=True, init_latents=init_latents_wm).images
             else:
